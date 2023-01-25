@@ -16,6 +16,11 @@ inputs:
     required: false
     default: ''
 
+  mongodb-replica-set-node-ports:
+    description: 'MongoDB replica set node ports'
+    required: false
+    default: '27017'
+
   mongodb-port:
     description: 'MongoDB port to use (default 27017)'
     required: false
@@ -46,3 +51,4 @@ runs:
     - ${{ inputs.mongodb-db }}
     - ${{ inputs.mongodb-username }}
     - ${{ inputs.mongodb-password }}
+    - ${{ inputs.mongodb-replica-set-node-ports }}

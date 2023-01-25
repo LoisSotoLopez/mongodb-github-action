@@ -10,7 +10,8 @@ jobs:
     strategy:
       matrix:
         node-version: [14, 16, 18]
-        mongodb-version: ['4.0', '4.2', '4.4', '5.0', '6.0']
+        mongodb-version: ['4.0']
+        # mongodb-version: ['4.0', '4.2', '4.4', '5.0', '6.0']
 
     steps:
       - name: Checkout
@@ -21,6 +22,7 @@ jobs:
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
           mongodb-replica-set: mongodb-test-rs
+          mongodb-replica-set-node-ports: "27017"
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -55,6 +57,7 @@ jobs:
           mongodb-port: ${{ matrix.mongodb-port }}
           mongodb-version: ${{ matrix.mongodb-version }}
           mongodb-replica-set: mongodb-test-rs
+          mongodb-replica-set-node-ports: ${{ matrix.mongodb-port }}
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3

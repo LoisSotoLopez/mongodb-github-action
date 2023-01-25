@@ -117,7 +117,9 @@ jobs:
 ### With a Replica Set (MongoDB `--replSet` Flag)
 You can run your tests against a MongoDB replica set by adding the `mongodb-replica-set: your-replicate-set-name` input in your action’s workflow. The value for `mongodb-replica-set` defines the name of your replica set. Replace `your-replicate-set-name` with the replica set name you want to use in your tests.
 
-The following example uses the replica set name `test-rs`:
+Unless you specify a value for the `mongodb-replica-set-ports` input, your replica set will have a single MongoDB node. You can configure the replica set to have N nodes by providing a string of N comma-separated port numbers, such as: `27017,27117,27217` to the `mongodb-replica-set-ports` input.
+
+The following example uses the name `test-rs` for a single-node replica set:
 
 ```yaml
 name: Run tests
@@ -146,6 +148,46 @@ jobs:
       with:
         mongodb-version: ${{ matrix.mongodb-version }}
         mongodb-replica-set: test-rs
+        mongodb-port: 42069
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run tests
+      run: npm test
+      env:
+        CI: true
+```
+
+The example below is similar to the previous one but 3 MongoDB nodes, at `localhost:27017`, `localhost:27117` and `localhost:27217` each, form the replica set:
+```yaml
+name: Run tests
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [14.x, 16.x, 18.x]
+        mongodb-version: ['4.2', '4.4', '5.0', '6.0']
+
+    steps:
+    - name: Git checkout
+      uses: actions/checkout@v3
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+
+    - name: Start MongoDB
+      uses: supercharge/mongodb-github-action@1.8.0
+      with:
+        mongodb-version: ${{ matrix.mongodb-version }}
+        mongodb-replica-set: test-rs
+        mongodb-replica-set-node-ports: "27017,27117,27217"
         mongodb-port: 42069
 
     - name: Install dependencies

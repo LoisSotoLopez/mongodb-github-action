@@ -11,7 +11,8 @@ test('connects to MongoDB', async () => {
     user: MONGODB_USERNAME,
     pass: MONGODB_PASSWORD,
     dbName: MONGODB_DB,
-    authSource: MONGODB_USERNAME && MONGODB_PASSWORD ? 'admin' : undefined
+    authSource: MONGODB_USERNAME && MONGODB_PASSWORD ? 'admin' : undefined,
+    directConnection: true
   }).asPromise()
 
   await connection.close()
