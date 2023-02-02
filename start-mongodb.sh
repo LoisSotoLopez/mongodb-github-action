@@ -102,6 +102,7 @@ do
       exit 2
     fi
   done
+
   echo "::endgroup::"
 done
 

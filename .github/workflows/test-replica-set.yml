@@ -3,15 +3,14 @@ name: Replica Set Tests
 on: [push, pull_request]
 
 jobs:
-  single-node-replica-set-on-default-port:
+  replica-set-on-default-port:
     name: MongoDB v${{ matrix.mongodb-version }} RS — Node.js v${{ matrix.node-version }}
 
     runs-on: ubuntu-latest
     strategy:
       matrix:
         node-version: [14, 16, 18]
-        mongodb-version: ['4.0']
-        # mongodb-version: ['4.0', '4.2', '4.4', '5.0', '6.0']
+        mongodb-version: ['4.0', '4.2', '4.4', '5.0', '6.0']
 
     steps:
       - name: Checkout
@@ -22,7 +21,7 @@ jobs:
         with:
           mongodb-version: ${{ matrix.mongodb-version }}
           mongodb-replica-set: mongodb-test-rs
-          mongodb-replica-set-node-ports: "27017"
+          mongodb-replica-set-node-ports: "27017,27117,27217"
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -37,8 +36,9 @@ jobs:
         env:
           CI: true
           MONGODB_REPLICA_SET: mongodb-test-rs
+          MONGODB_PORTS: "27017,27117,27217"
 
-  single-node-replica-set-on-custom-port:
+  replica-set-on-custom-port:
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -57,7 +57,7 @@ jobs:
           mongodb-port: ${{ matrix.mongodb-port }}
           mongodb-version: ${{ matrix.mongodb-version }}
           mongodb-replica-set: mongodb-test-rs
-          mongodb-replica-set-node-ports: ${{ matrix.mongodb-port }}
+          mongodb-replica-set-node-ports: "27017,27117,27217"
 
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
@@ -72,4 +72,5 @@ jobs:
         env:
           CI: true
           MONGODB_PORT: ${{ matrix.mongodb-port }}
+          MONGODB_PORTS: "27017,27117,27217"
           MONGODB_REPLICA_SET: mongodb-test-rs
