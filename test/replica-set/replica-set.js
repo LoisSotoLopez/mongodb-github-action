@@ -6,7 +6,7 @@ const { execSync } = require('node:child_process')
 const Mongoose = require('mongoose')
 const { off } = require('node:process')
 
-const { MONGODB_PORT = "27017", MONGODB_PORTS = "27017", MONGODB_REPLICA_SET = 'mongodb-test-rs' } = process.env
+const { MONGODB_PORT = "27017", MONGODB_PORTS = "27017,27117,27217", MONGODB_REPLICA_SET = 'mongodb-test-rs' } = process.env
 const PORTS = MONGODB_PORTS.split(",")
 
 function runCmd(cmd) {
@@ -38,24 +38,10 @@ function executeMongoCmd(node, cmd) {
   return out
 }
 
-function allExecuteMongoCmd(cmd) {
-  let indexes = Array.from({length: PORTS.length}, (v,k)=>k+1)
-  indexes.forEach(i => {
-    let node = `mongodb-${i}`
-    executeMongoCmd(node, cmd)
-  })
-}
-
 function stopRsNode(index) {
   let containerName = `mongodb-${index}`
   runCmd(`docker kill ${containerName}`)
   console.log(`container ${containerName} stopped`)
-}
-
-function isSecondaryOk(node) {
-  let out = executeMongoCmd(node, "rs.secondaryOk()")
-  console.log(out)
-  return out
 }
 
 function waitCmdOutHas(cmd, strToHave) {
@@ -74,7 +60,7 @@ setupDns()
 test.before(async () => {
   const hostsStrings = PORTS.map(x => `localhost:${x}`)
   const hostsString = hostsStrings.join(",")
-  const connectionString = `mongodb://${hostsString}/test?replicaSet=${MONGODB_REPLICA_SET}`
+  const connectionString = `mongodb://${hostsString}/`
 
   console.log('---------------------------------------------------------------------')
   console.log('connecting to MongoDB using connection string -> ' + connectionString)
