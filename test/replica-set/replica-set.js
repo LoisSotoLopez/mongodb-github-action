@@ -60,7 +60,7 @@ setupDns()
 test.before(async () => {
   const hostsStrings = PORTS.map(x => `localhost:${x}`)
   const hostsString = hostsStrings.join(",")
-  const connectionString = `mongodb://${hostsString}/`
+  const connectionString = `mongodb://${hostsString}/readPreference=primaryPreferred`
 
   console.log('---------------------------------------------------------------------')
   console.log('connecting to MongoDB using connection string -> ' + connectionString)
@@ -69,8 +69,10 @@ test.before(async () => {
   try {
     await Mongoose.connect(connectionString, {
       serverSelectionTimeoutMS: 1500,
-      keepAlive: true
+      keepAlive: true,
+
     })
+
   } catch (error) {
     console.log(error)
   }
