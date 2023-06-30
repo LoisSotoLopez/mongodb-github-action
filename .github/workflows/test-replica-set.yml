@@ -1,6 +1,6 @@
 name: Replica Set Tests
 
-on: [push, pull_request]
+on: [push, pull_request, workflow_dispatch]
 
 jobs:
   replica-set-on-default-port:
