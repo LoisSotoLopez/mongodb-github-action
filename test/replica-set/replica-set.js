@@ -32,7 +32,7 @@ function setupDns() {
 }
 
 function executeMongoCmd(node, cmd) {
-  let docker_cmd = `docker exec ${node} mongo localhost:${MONGODB_PORT} --eval \"${cmd}\"`
+  let docker_cmd = `docker exec ${node} mongo localhost:${MONGODB_PORT} --eval ${cmd}`
   let out = runCmd(docker_cmd)
   console.log(node, "output for executeMongoCmd", cmd,"\n", out)
   return out
@@ -97,6 +97,7 @@ test('repeatedly reads document as rs members die', async () => {
   const albert1 = await new Dog({ name: 'Albert' }).save()
   expect(albert1.name).toEqual('Albert')
 
+  executeMongoCmd(`mongodb-1`, "show dbs")
 
   waitCmdOutHas("db.dogs.find({})", "\"name\" : \"Albert\"")
   stopRsNode(1)
