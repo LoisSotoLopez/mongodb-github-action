@@ -31,7 +31,7 @@
   },
   "scripts": {
     "lint": "eslint test --ext .js",
-    "test": "c8 --include=dist uvu --ignore fixtures",
+    "test": "c8 --include=dist uvu --verbose --ignore fixtures",
     "posttest": "c8 report --reporter=html"
   }
 }

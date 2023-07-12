@@ -6,25 +6,27 @@ const { execSync } = require('node:child_process')
 const Mongoose = require('mongoose')
 const { off } = require('node:process')
 
-const { MONGODB_PORT = "27017", MONGODB_PORTS = "27017,27117,27217", MONGODB_REPLICA_SET = 'mongodb-test-rs' } = process.env
+const { 
+  MONGODB_PORT = "27017", 
+  MONGODB_PORTS = "27017,27117,27217", 
+  MONGODB_REPLICA_SET = 'mongodb-test-rs' 
+} = process.env
 const PORTS = MONGODB_PORTS.split(",")
 
+let rs_conns;
+
 function runCmd(cmd) {
-  try {
-    return execSync(cmd).toString()
-  } catch (err) {
-    console.error("could not execute command: ", cmd)
-    err.output.forEach(o =>{
-      if(o!=null) {console.error("output ", o.toString())}
-    })
-    return "err"
-  }
+  return execSync(cmd).toString()
 }
 
-function setupDns() {
+function container_name(node_number) {
+  return `mongodb-${node_number}`
+}
+
+function setupDns(mongo_version) {
   let indexes = Array.from({length: PORTS.length}, (v,k)=>k+1)
   indexes.forEach(i => {
-    let containerName = `mongodb-${i}`
+    let containerName = container_name(i)
     let findIpCmd = `docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' ${containerName}`
     let ip = runCmd(findIpCmd).toString().trim()
     runCmd(`echo \"${ip} ${containerName}\" | sudo tee -a /etc/hosts`)
@@ -32,7 +34,7 @@ function setupDns() {
 }
 
 function executeMongoCmd(node, cmd) {
-  let docker_cmd = `docker exec ${node} mongo localhost:${MONGODB_PORT} --eval ${cmd}`
+  let docker_cmd = `docker exec ${node} mongo localhost:${MONGODB_PORT}/test --eval "${cmd}"`
   let out = runCmd(docker_cmd)
   console.log(node, "output for executeMongoCmd", cmd,"\n", out)
   return out
@@ -57,47 +59,97 @@ function waitCmdOutHas(cmd, strToHave) {
 
 setupDns()
 
-test.before(async () => {
-  const hostsStrings = PORTS.map(x => `localhost:${x}`)
-  const hostsString = hostsStrings.join(",")
-  const connectionString = `mongodb://${hostsString}/readPreference=primaryPreferred`
+async function createConnections(hostStrings) {
+  const connectionOptions = {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+  };
 
-  console.log('---------------------------------------------------------------------')
-  console.log('connecting to MongoDB using connection string -> ' + connectionString)
-  console.log('---------------------------------------------------------------------')
+  const connectionPromises = new Map(hostStrings.map(async (hostString) => {
+    try {
+      let connectionString = `mongodb://${hostString}?replicaSet=${MONGODB_REPLICA_SET}&readPreference=primaryPreferred`
+      let connection = Mongoose.createConnection(connectionString, connectionOptions);
+      await connection.asPromise();
+      console.log(`Mongoose connection successful for ${connectionString}`);
+      return [hostString, connection];
+    } catch (error) {
+      console.error(`Mongoose connection failed for ${connectionString}:`, error);
+      throw error;
+    }
+  }));
 
   try {
-    await Mongoose.connect(connectionString, {
-      serverSelectionTimeoutMS: 1500,
-      keepAlive: true,
-
-    })
-
+    let connections = await Promise.all(connectionPromises);
+    console.log('All connections successful');
+    return connections;
   } catch (error) {
-    console.log(error)
+    console.error('One or more connections failed:', error);
+    throw error; 
   }
+}
+
+function get_primary_conn() {
+  let primary_member;
+  console.log(rs_conns)
+  Array.from(rs_conns).forEach(async ([hostString, conn]) => {
+    console.log(db)
+    const { ok, set, members } = await conn.db.admin().command({ replSetGetStatus: 1 })
+    let node_primary = members.find(function(neighbour) {
+      return (1 == neighbour.state)
+    })
+    if (primary_member == null) {
+      primary_member = node_primary
+    }
+    if (primary_member !== node_primary); return "unknown"
+  })
+  let primary_hostString = primary.name()
+  return rs_conns.get(primary_hostString)
+}
+
+test.before(async () => {
+  const hostStrings = PORTS.map(x => `localhost:${x}`)
+
+  console.log('---------------------------------------------------------------------')
+  await createConnections(hostStrings)
+  .then((conns) => {
+    console.log('All connections established.');
+    console.log('---------------------------------------------------------------------')
+    rs_conns=conns
+  })
+  .catch((error) => {
+    console.error('One or more connections failed:', error);
+    throw(error)
+  })
 })
 
 test.after(async () => {
-  await Mongoose.connection.db.dropDatabase()
   await Mongoose.disconnect()
 })
 
 test('queries the replica set status', async () => {
-  const db = Mongoose.connection.db.admin()
-  const { ok, set, members } = await db.command({ replSetGetStatus: 1 })
-
-  expect(ok).toBe(1)
-  expect(set).toEqual(MONGODB_REPLICA_SET)
+  let neighbours;
+  rs_conns.forEach(async (conn) => {
+    const { ok, set, members } = await conn.db.admin().command({ replSetGetStatus: 1 })
+    console.log(set)
+    console.log(members)
+    expect(ok).toBe(1)
+    expect(set).toEqual(MONGODB_REPLICA_SET)
+    if (neighbours == null) {
+      neighbours = members
+    }
+    expect(members).toEqual(neighbours)
+  })
 })
 
 test('repeatedly reads document as rs members die', async () => {
-  const Dog = Mongoose.model('Dog', { name: String })
+  let primary_node_conn = get_primary_conn()
+  console.log("Primary node conn:", primary_node_conn)
 
-  const albert1 = await new Dog({ name: 'Albert' }).save()
-  expect(albert1.name).toEqual('Albert')
+  // const dog1 = 
 
-  executeMongoCmd(`mongodb-1`, "show dbs")
+  expect(dog1.name).toEqual('Albert')
+
+  executeMongoCmd("mongodb-1", "db.dogs.find({})")
 
   waitCmdOutHas("db.dogs.find({})", "\"name\" : \"Albert\"")
   stopRsNode(1)

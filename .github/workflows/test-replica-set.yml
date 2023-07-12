@@ -39,6 +39,7 @@ jobs:
           CI: true
           MONGODB_REPLICA_SET: mongodb-test-rs
           MONGODB_PORTS: "27017,27117,27217"
+          MONGODB_VERSION: ${{ matrix.mongodb-version }}
 
   replica-set-on-custom-port:
     runs-on: ubuntu-latest
